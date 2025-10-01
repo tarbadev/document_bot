@@ -1,90 +1,140 @@
-import json
-import math
-import os
+from typing import List
 
 from django import forms
 from django.views.generic import FormView
-from openai import OpenAI
+from langchain.chat_models import init_chat_model
+from langchain_community.document_loaders import TextLoader
+from langchain_community.vectorstores import Chroma
+from langchain_core.documents import Document
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_openai import OpenAIEmbeddings
+from langchain_text_splitters import CharacterTextSplitter
+from langgraph.graph import START, StateGraph
+from pydantic import BaseModel, Field
+from typing_extensions import TypedDict
 
-FAQ_FILE_PATH = "faq.json"
-EMBEDDINGS_FILE_PATH = "faq-embeddings.json"
-EMBEDDING_MODEL = "text-embedding-3-small"
+LOCAL_STORAGE_PATH = "local_storage"
 
-client = OpenAI()
+system_prompt = (
+    "You're a helpful AI assistant. Given a user question "
+    "and a document, answer the user question."
+    "\n\nHere is the document: "
+    "{context}"
+)
 
+llm = init_chat_model("gpt-4o-mini", model_provider="openai")
 
-def setup_embeddings():
-    with open(FAQ_FILE_PATH, "r", encoding="utf-8") as f:
-        faqs = json.load(f)
-
-    for item in faqs:
-        print("Q:", item["q"])
-        print("A:", item["a"])
-        print("---")
-
-    inputs = [item["q"] for item in faqs]
-
-    resp = client.embeddings.create(model=EMBEDDING_MODEL, input=inputs)
-    vecs = [d.embedding for d in resp.data]
-
-    for item, emb in zip(faqs, vecs):
-        item["embedding"] = emb
-
-    with open(EMBEDDINGS_FILE_PATH, "w", encoding="utf-8") as f:
-        json.dump(faqs, f, ensure_ascii=False, indent=2)
-
-    print("Wrote {} with".format(EMBEDDINGS_FILE_PATH), len(faqs), "items.")
-
-    return load_embeddings()
+prompt = ChatPromptTemplate.from_messages(
+    [
+        ("system", system_prompt),
+        ("human", "{question}"),
+    ]
+)
+prompt.pretty_print()
 
 
-def load_embeddings():
-    if not os.path.exists(EMBEDDINGS_FILE_PATH):
-        return setup_embeddings()
+def load_embeddings(chunks):
+    db = Chroma.from_documents(chunks, OpenAIEmbeddings())
 
-    with open(EMBEDDINGS_FILE_PATH, "r", encoding="utf-8") as f:
-        return json.load(f)
+    return db.as_retriever()
 
 
 def add_to_messages(author, content):
     messages.append({"author": author, "content": content})
 
 
+def load_and_chunk_document(file):
+    file_path = f"{LOCAL_STORAGE_PATH}/{file.name}"
+    with open(file_path, "wb+") as destination:
+        for chunk in file.chunks():
+            destination.write(chunk)
+
+    text_splitter = CharacterTextSplitter(chunk_size=500, chunk_overlap=0)
+    chunks = text_splitter.split_documents(TextLoader(file_path).load())
+
+    print(f"Chunks: {len(chunks)}")
+
+    return chunks
+
+
+def format_docs_with_id(docs: List[Document]) -> str:
+    print(docs)
+    formatted = [
+        f"Source ID: {i}\nArticle Snippet: {doc.page_content}"
+        for i, doc in enumerate(docs)
+    ]
+    return "\n\n" + "\n\n".join(formatted)
+
+
+class Citation(BaseModel):
+    source_id: int = Field(
+        ...,
+        description="The integer ID of a SPECIFIC source which justifies the answer.",
+    )
+    quote: str = Field(
+        ...,
+        description="The VERBATIM quote from the specified source that justifies the answer.",
+    )
+
+
+class QuotedAnswer(BaseModel):
+    """Answer the user question based only on the given sources, and cite the sources used."""
+
+    answer: str = Field(
+        ...,
+        description="The answer to the user question, which is based only on the given sources.",
+    )
+    citations: List[Citation] = Field(
+        ..., description="Citations from the given sources that justify the answer."
+    )
+
+
+class State(TypedDict):
+    question: str
+    context: Document
+    answer: QuotedAnswer
+
+
+def format_answer(quoted_answer: QuotedAnswer) -> str:
+    return f"{quoted_answer.answer}<br /><br />{[citation.quote for citation in quoted_answer.citations]}"
+
+
 class AskQuestionForm(forms.Form):
+    file = forms.FileField()
     question = forms.CharField()
-    index = load_embeddings()
+    retriever = None
 
-    def search(self, query_embedding, index, k=1):
-        scored = [(self.cosine(query_embedding, item["embedding"]), item) for item in index]
-        scored.sort(key=lambda x: x[0], reverse=True)
-        topk = scored[:k]
-        return [{"similarity": round(sim, 4), "q": it["q"], "a": it["a"]} for sim, it in topk]
-
-    def ask(self):
-        question_asked = self.cleaned_data["question"]
-        add_to_messages('user', question_asked)
-
-        emb = client.embeddings.create(model=EMBEDDING_MODEL, input=question_asked).data[0].embedding
-
-        result = self.search(emb, self.index, k=1)[0]
-
-        print("Matched:", result["q"])
-        answer = result["a"]
-        print("Answer:", answer, "| similarity:", result["similarity"])
-
-        add_to_messages('assistant', """
-        Matched question: {}
-        Answer: {}
-        """.format(result["q"], answer))
-
-        return answer
+    def retrieve(self, state: State):
+        retrieved_docs = self.retriever.invoke(state["question"])
+        return {"context": retrieved_docs}
 
     @staticmethod
-    def cosine(u, v):
-        dot = sum(a * b for a, b in zip(u, v))
-        nu = math.sqrt(sum(a * a for a in u))
-        nv = math.sqrt(sum(b * b for b in v))
-        return 0.0 if nu == 0.0 or nv == 0.0 else dot / (nu * nv)
+    def generate(state: State):
+        formatted_docs = format_docs_with_id(state["context"])
+        prompt_value = prompt.invoke({"question": state["question"], "context": formatted_docs})
+        structured_llm = llm.with_structured_output(QuotedAnswer)
+        response = structured_llm.invoke(prompt_value)
+        return {"answer": response}
+
+    def upload_and_ask_question(self, file):
+        chunks = load_and_chunk_document(file)
+        question = self.cleaned_data["question"]
+        add_to_messages('user', question)
+
+        self.retriever = load_embeddings(chunks)
+
+        graph_builder = StateGraph(State).add_sequence([self.retrieve, self.generate])
+        graph_builder.add_edge(START, "retrieve")
+        graph = graph_builder.compile()
+
+        result = graph.invoke({"question": question})
+
+        sources = [doc.metadata["source"] for doc in result["context"]]
+        print(f"Sources: {sources}\n\n")
+        print(f"Answer: {result['answer']}")
+        print(result["context"][0])
+
+        add_to_messages('assistant', format_answer(result["answer"]))
 
 
 messages = []
@@ -102,6 +152,8 @@ class HomePageView(FormView):
         return context
 
     def form_valid(self, form):
-        form.ask()
+        form = AskQuestionForm(self.request.POST, self.request.FILES)
+        if form.is_valid():
+            form.upload_and_ask_question(self.request.FILES["file"])
 
         return super(HomePageView, self).form_valid(form)
