@@ -3,17 +3,16 @@ from typing import List
 from django import forms
 from langchain.chat_models import init_chat_model
 from langchain_community.document_loaders import TextLoader
-from langchain_community.vectorstores import Chroma
 from langchain_core.documents import Document
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import CharacterTextSplitter
 from langgraph.constants import START
 from langgraph.graph import StateGraph
 
+from home.messages_repository import add_to_messages
 from home.quoted_answer import QuotedAnswer
+from home.repository import add_documents, vector_store
 from home.state import State
-from home.views import add_to_messages
 
 LOCAL_STORAGE_PATH = "local_storage"
 
@@ -35,19 +34,13 @@ prompt = ChatPromptTemplate.from_messages(
 prompt.pretty_print()
 
 
-def load_embeddings(chunks):
-    db = Chroma.from_documents(chunks, OpenAIEmbeddings())
-
-    return db.as_retriever()
-
-
 def load_and_chunk_document(file):
     file_path = f"{LOCAL_STORAGE_PATH}/{file.name}"
     with open(file_path, "wb+") as destination:
         for chunk in file.chunks():
             destination.write(chunk)
 
-    text_splitter = CharacterTextSplitter(chunk_size=500, chunk_overlap=0)
+    text_splitter = CharacterTextSplitter(chunk_size=500, chunk_overlap=15)
     chunks = text_splitter.split_documents(TextLoader(file_path).load())
 
     print(f"Chunks: {len(chunks)}")
@@ -62,31 +55,32 @@ def format_docs_with_id(docs: List[Document]) -> str:
     ]
     return "\n\n" + "\n\n".join(formatted)
 
+def retrieve(state: State):
+    retrieved_docs = vector_store.similarity_search(state["question"])
+    return {"context": retrieved_docs}
+
+
+def generate(state: State):
+    formatted_docs = format_docs_with_id(state["context"])
+    prompt_value = prompt.invoke({"question": state["question"], "context": formatted_docs})
+    structured_llm = llm.with_structured_output(QuotedAnswer)
+    response = structured_llm.invoke(prompt_value)
+    return {"answer": response}
+
+
 class AskQuestionForm(forms.Form):
-    file = forms.FileField()
+    file = forms.FileField(required=False)
     question = forms.CharField()
-    retriever = None
-
-    def retrieve(self, state: State):
-        retrieved_docs = self.retriever.invoke(state["question"])
-        return {"context": retrieved_docs}
-
-    @staticmethod
-    def generate(state: State):
-        formatted_docs = format_docs_with_id(state["context"])
-        prompt_value = prompt.invoke({"question": state["question"], "context": formatted_docs})
-        structured_llm = llm.with_structured_output(QuotedAnswer)
-        response = structured_llm.invoke(prompt_value)
-        return {"answer": response}
 
     def upload_and_ask_question(self, file):
-        chunks = load_and_chunk_document(file)
         question = self.cleaned_data["question"]
         add_to_messages('user', question)
 
-        self.retriever = load_embeddings(chunks)
+        if file:
+            chunks = load_and_chunk_document(file)
+            add_documents(chunks)
 
-        graph_builder = StateGraph(State).add_sequence([self.retrieve, self.generate])
+        graph_builder = StateGraph(State).add_sequence([retrieve, generate])
         graph_builder.add_edge(START, "retrieve")
         graph = graph_builder.compile()
 
