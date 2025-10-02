@@ -9,7 +9,7 @@ from langchain_text_splitters import CharacterTextSplitter
 from langgraph.constants import START
 from langgraph.graph import StateGraph
 
-from home.messages_repository import add_to_messages
+from home.messages_repository import add_message
 from home.quoted_answer import QuotedAnswer
 from home.repository import add_documents, vector_store
 from home.state import State
@@ -70,11 +70,11 @@ def generate(state: State):
 
 class AskQuestionForm(forms.Form):
     file = forms.FileField(required=False)
-    question = forms.CharField()
+    question = forms.CharField(label="Question:", widget=forms.TextInput(attrs={'placeholder': 'Type a question.'}))
 
     def upload_and_ask_question(self, file):
         question = self.cleaned_data["question"]
-        add_to_messages('user', question)
+        add_message('user', question)
 
         if file:
             chunks = load_and_chunk_document(file)
@@ -89,6 +89,5 @@ class AskQuestionForm(forms.Form):
         sources = [doc.metadata["source"] for doc in result["context"]]
         print(f"Sources: {sources}\n\n")
         print(f"Answer: {result['answer']}")
-        print(result["context"][0])
 
-        add_to_messages('assistant', result["answer"].to_string())
+        add_message('assistant', result["answer"].to_string())

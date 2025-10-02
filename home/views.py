@@ -11,19 +11,11 @@ class HomePageView(FormView):
     # extra_context = {'messages': get_messages()}
 
     def get_context_data(self, **kwargs):
-        context = super(HomePageView, self).get_context_data(**kwargs)
-
-        messages = get_messages()
-        context['messages'] = messages
-
-        print("GENERATING CONTEXT DATA")
-        print(context["messages"])
-
+        context = super().get_context_data(**kwargs)
+        context['messages'] = get_messages()
         return context
 
     def form_valid(self, form):
-        form = AskQuestionForm(self.request.POST, self.request.FILES)
-        if form.is_valid():
-            form.upload_and_ask_question(self.request.FILES.get("file"))
+        form.upload_and_ask_question(self.request.FILES.get("file"))
 
         return super(HomePageView, self).form_valid(form)

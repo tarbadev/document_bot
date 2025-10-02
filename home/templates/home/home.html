@@ -1,25 +1,460 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FAQ Chatbot</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #8e2de2 0%, #4a00e0 100%);
+            color: white;
+            padding: 32px 24px;
+            text-align: center;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+            flex-shrink: 0;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+        }
+
+        .header p {
+            margin-top: 8px;
+            font-size: 15px;
+            opacity: 0.9;
+            font-weight: 400;
+        }
+
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 32px 24px 32px 24px;
+            background: #f5f5f5;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .messages-wrapper {
+            max-width: 900px;
+            width: 100%;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .message-box {
+            display: flex;
+            width: 100%;
+            gap: 12px;
+            animation: slideIn 0.3s ease-out;
+            align-items: flex-start;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
         .user {
-            color: green;
+            justify-content: flex-end;
         }
 
         .assistant {
-            color: blue;
+            justify-content: flex-start;
+        }
+
+        .avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .user .avatar {
+            background: linear-gradient(135deg, #8e2de2 0%, #4a00e0 100%);
+            order: 2;
+        }
+
+        .assistant .avatar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            order: 1;
+        }
+
+        .message-content {
+            max-width: 65%;
+            display: flex;
+        }
+
+        .user .message-content {
+            order: 1;
+            justify-content: flex-end;
+        }
+
+        .assistant .message-content {
+            order: 2;
+            justify-content: flex-start;
+        }
+
+        .user .message-content p {
+            background: linear-gradient(135deg, #8e2de2 0%, #4a00e0 100%);
+            color: white;
+            border-radius: 20px 20px 4px 20px;
+            padding: 12px 18px;
+            margin: 0;
+            word-wrap: break-word;
+            line-height: 1.5;
+        }
+
+        .assistant .message-content p {
+            background: white;
+            color: #2d3748;
+            border-radius: 20px 20px 20px 4px;
+            padding: 12px 18px;
+            margin: 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            word-wrap: break-word;
+            line-height: 1.5;
+        }
+
+        .form-container {
+            background: white;
+            padding: 24px;
+            border-top: 1px solid #e5e7eb;
+            box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.04);
+            flex-shrink: 0;
+            position: sticky;
+            bottom: 0;
+            z-index: 10;
+        }
+
+        .form-content {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        form {
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+        }
+
+        .form-fields {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-group label {
+            font-size: 13px;
+            font-weight: 500;
+            color: #6b7280;
+        }
+
+        input[type="text"],
+        textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid #d1d5db;
+            border-radius: 12px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: all 0.2s;
+            resize: none;
+            background: #fafafa;
+        }
+
+        input[type="text"]:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #8e2de2;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(142, 45, 226, 0.1);
+        }
+
+        /* Hide the default file input */
+        input[type="file"] {
+            display: none;
+        }
+
+        /* Custom file input styling */
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-input-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 16px;
+            background: #fafafa;
+            border: 1px dashed #d1d5db;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+            color: #6b7280;
+        }
+
+        .file-input-label:hover {
+            background: white;
+            border-color: #8e2de2;
+            color: #8e2de2;
+        }
+
+        .file-input-label.has-file {
+            border-style: solid;
+            border-color: #8e2de2;
+            background: #f5f3ff;
+            color: #8e2de2;
+        }
+
+        .file-icon {
+            font-size: 18px;
+        }
+
+        .file-text {
+            flex: 1;
+        }
+
+        .file-remove {
+            background: none;
+            border: none;
+            color: #ef4444;
+            cursor: pointer;
+            font-size: 18px;
+            padding: 0;
+            display: none;
+            line-height: 1;
+        }
+
+        .file-input-label.has-file .file-remove {
+            display: block;
+        }
+
+        .file-remove:hover {
+            color: #dc2626;
+        }
+
+        input[type="submit"] {
+            background: linear-gradient(135deg, #8e2de2 0%, #4a00e0 100%);
+            color: white;
+            border: none;
+            padding: 12px 32px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        input[type="submit"]:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(142, 45, 226, 0.3);
+        }
+
+        input[type="submit"]:active {
+            transform: translateY(0);
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #9ca3af;
+            padding: 80px 20px;
+            font-size: 15px;
+        }
+
+        .empty-state svg {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 12px;
+            opacity: 0.4;
+        }
+
+        /* Scrollbar styling */
+        .messages-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .messages-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .messages-container::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 3px;
+        }
+
+        .messages-container::-webkit-scrollbar-thumb:hover {
+            background: #9ca3af;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                padding: 24px 16px;
+            }
+
+            .header h1 {
+                font-size: 24px;
+            }
+
+            .messages-container {
+                padding: 24px 16px;
+            }
+
+            .form-container {
+                padding: 16px;
+            }
+
+            .message-content {
+                max-width: 75%;
+            }
+
+            .avatar {
+                width: 38px;
+                height: 38px;
+                font-size: 18px;
+            }
+
+            form {
+                flex-direction: column;
+            }
+
+            input[type="submit"] {
+                width: 100%;
+            }
         }
     </style>
 </head>
 <body>
-<h1>FAQ Chatbot</h1>
-<form method="post" enctype="multipart/form-data">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <input type="submit" value="Submit">
-</form>
-{% for message in messages %}
-<p class="{{ message.author }}">{{message.content}}</p>
-{% endfor %}
+    <div class="header">
+        <h1>💬 Document Chatbot</h1>
+        <p>Ask questions and get instant answers</p>
+    </div>
+
+    <div class="messages-container" id="messagesContainer">
+        <div class="messages-wrapper">
+            {% if messages %}
+                {% for message in messages %}
+                <div class="message-box {{ message.author }}">
+                    <div class="avatar">
+                        {% if message.author == 'user' %}
+                            👤
+                        {% else %}
+                            🤖
+                        {% endif %}
+                    </div>
+                    <div class="message-content">
+                        <p>{{ message.content|linebreaksbr }}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
+                    <p>No messages yet. Start a conversation!</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="form-container">
+        <div class="form-content">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="form-fields">
+                    <div class="form-group">
+                        <label for="id_question">Your question</label>
+                        {{ form.question }}
+                    </div>
+                    <div class="form-group">
+                        <label for="id_file">Upload file (optional)</label>
+                        <div class="file-input-wrapper">
+                            {{ form.file }}
+                            <label for="id_file" class="file-input-label" id="fileLabel">
+                                <span class="file-icon">📎</span>
+                                <span class="file-text" id="fileText">Click to attach a file</span>
+                                <button type="button" class="file-remove" id="fileRemove" title="Remove file">✕</button>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <input type="submit" value="Send">
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Auto-scroll to bottom of messages
+        const messagesContainer = document.getElementById('messagesContainer');
+        if (messagesContainer) {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        // File input handling
+        const fileInput = document.getElementById('id_file');
+        const fileLabel = document.getElementById('fileLabel');
+        const fileText = document.getElementById('fileText');
+        const fileRemove = document.getElementById('fileRemove');
+
+        fileInput.addEventListener('change', function(e) {
+            if (this.files && this.files.length > 0) {
+                const fileName = this.files[0].name;
+                fileText.textContent = fileName;
+                fileLabel.classList.add('has-file');
+            } else {
+                fileText.textContent = 'Click to attach a file';
+                fileLabel.classList.remove('has-file');
+            }
+        });
+
+        fileRemove.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            fileInput.value = '';
+            fileText.textContent = 'Click to attach a file';
+            fileLabel.classList.remove('has-file');
+        });
+    </script>
 </body>
 </html>
