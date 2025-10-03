@@ -4,7 +4,7 @@ from . import models
 
 
 class MessageAdmin(admin.ModelAdmin):
-    pass
+    list_display = ('author', 'content')
 
 
 admin.site.register(models.Message, MessageAdmin)

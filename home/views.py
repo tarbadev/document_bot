@@ -8,7 +8,6 @@ class HomePageView(FormView):
     template_name = 'home/home.html'
     form_class = AskQuestionForm
     success_url = '.'
-    # extra_context = {'messages': get_messages()}
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

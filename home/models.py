@@ -4,3 +4,4 @@ from django.db import models
 class Message(models.Model):
     author = models.CharField(max_length=50)
     content = models.TextField()
+    created = models.DateTimeField(auto_now_add=True)

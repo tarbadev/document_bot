@@ -18,6 +18,4 @@ class QuotedAnswer(BaseModel):
 
     def to_string(self) -> str:
         citations_text = "\n\n".join([f'"{citation.quote}"' for citation in self.citations])
-        s = f"{self.answer}\n\n{citations_text}"
-        print(s)
-        return s
+        return f"{self.answer}\n\n{citations_text}"

@@ -365,96 +365,97 @@
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>💬 Document Chatbot</h1>
-        <p>Ask questions and get instant answers</p>
-    </div>
+<div class="header">
+    <h1>💬 Document Chatbot</h1>
+    <p>Ask questions and get instant answers</p>
+</div>
 
-    <div class="messages-container" id="messagesContainer">
-        <div class="messages-wrapper">
-            {% if messages %}
-                {% for message in messages %}
-                <div class="message-box {{ message.author }}">
-                    <div class="avatar">
-                        {% if message.author == 'user' %}
-                            👤
-                        {% else %}
-                            🤖
-                        {% endif %}
-                    </div>
-                    <div class="message-content">
-                        <p>{{ message.content|linebreaksbr }}</p>
-                    </div>
-                </div>
-                {% endfor %}
-            {% else %}
-                <div class="empty-state">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                    </svg>
-                    <p>No messages yet. Start a conversation!</p>
-                </div>
-            {% endif %}
+<div class="messages-container" id="messagesContainer">
+    <div class="messages-wrapper">
+        {% if messages %}
+        {% for message in messages %}
+        <div class="message-box {{ message.author }}">
+            <div class="avatar">
+                {% if message.author == 'user' %}
+                👤
+                {% else %}
+                🤖
+                {% endif %}
+            </div>
+            <div class="message-content">
+                <p>{{ message.content|linebreaksbr }}</p>
+            </div>
         </div>
+        {% endfor %}
+        {% else %}
+        <div class="empty-state">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+            </svg>
+            <p>No messages yet. Start a conversation!</p>
+        </div>
+        {% endif %}
     </div>
+</div>
 
-    <div class="form-container">
-        <div class="form-content">
-            <form method="post" enctype="multipart/form-data">
-                {% csrf_token %}
-                <div class="form-fields">
-                    <div class="form-group">
-                        <label for="id_question">Your question</label>
-                        {{ form.question }}
-                    </div>
-                    <div class="form-group">
-                        <label for="id_file">Upload file (optional)</label>
-                        <div class="file-input-wrapper">
-                            {{ form.file }}
-                            <label for="id_file" class="file-input-label" id="fileLabel">
-                                <span class="file-icon">📎</span>
-                                <span class="file-text" id="fileText">Click to attach a file</span>
-                                <button type="button" class="file-remove" id="fileRemove" title="Remove file">✕</button>
-                            </label>
-                        </div>
+<div class="form-container">
+    <div class="form-content">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="form-fields">
+                <div class="form-group">
+                    <label for="id_question">Your question</label>
+                    {{ form.question }}
+                </div>
+                <div class="form-group">
+                    <label for="id_file">Upload file (optional)</label>
+                    <div class="file-input-wrapper">
+                        {{ form.file }}
+                        <label for="id_file" class="file-input-label" id="fileLabel">
+                            <span class="file-icon">📎</span>
+                            <span class="file-text" id="fileText">Click to attach a file</span>
+                            <button type="button" class="file-remove" id="fileRemove" title="Remove file">✕</button>
+                        </label>
                     </div>
                 </div>
-                <input type="submit" value="Send">
-            </form>
-        </div>
+            </div>
+            <input type="submit" value="Send">
+        </form>
     </div>
+</div>
 
-    <script>
-        // Auto-scroll to bottom of messages
-        const messagesContainer = document.getElementById('messagesContainer');
-        if (messagesContainer) {
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        }
+<script>
+    // Auto-scroll to bottom of messages
+    const messagesContainer = document.getElementById('messagesContainer');
+    if (messagesContainer) {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
 
-        // File input handling
-        const fileInput = document.getElementById('id_file');
-        const fileLabel = document.getElementById('fileLabel');
-        const fileText = document.getElementById('fileText');
-        const fileRemove = document.getElementById('fileRemove');
+    // File input handling
+    const fileInput = document.getElementById('id_file');
+    const fileLabel = document.getElementById('fileLabel');
+    const fileText = document.getElementById('fileText');
+    const fileRemove = document.getElementById('fileRemove');
 
-        fileInput.addEventListener('change', function(e) {
-            if (this.files && this.files.length > 0) {
-                const fileName = this.files[0].name;
-                fileText.textContent = fileName;
-                fileLabel.classList.add('has-file');
-            } else {
-                fileText.textContent = 'Click to attach a file';
-                fileLabel.classList.remove('has-file');
-            }
-        });
-
-        fileRemove.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            fileInput.value = '';
+    fileInput.addEventListener('change', function(e) {
+        if (this.files && this.files.length > 0) {
+            const fileName = this.files[0].name;
+            fileText.textContent = fileName;
+            fileLabel.classList.add('has-file');
+        } else {
             fileText.textContent = 'Click to attach a file';
             fileLabel.classList.remove('has-file');
-        });
-    </script>
+        }
+    });
+
+    fileRemove.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        fileInput.value = '';
+        fileText.textContent = 'Click to attach a file';
+        fileLabel.classList.remove('has-file');
+    });
+</script>
 </body>
 </html>

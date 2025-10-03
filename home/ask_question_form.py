@@ -31,7 +31,6 @@ prompt = ChatPromptTemplate.from_messages(
         ("human", "{question}"),
     ]
 )
-prompt.pretty_print()
 
 
 def load_and_chunk_document(file):
@@ -43,17 +42,16 @@ def load_and_chunk_document(file):
     text_splitter = CharacterTextSplitter(chunk_size=500, chunk_overlap=15)
     chunks = text_splitter.split_documents(TextLoader(file_path).load())
 
-    print(f"Chunks: {len(chunks)}")
-
     return chunks
 
+
 def format_docs_with_id(docs: List[Document]) -> str:
-    print(docs)
     formatted = [
         f"Source ID: {i}\nArticle Snippet: {doc.page_content}"
         for i, doc in enumerate(docs)
     ]
     return "\n\n" + "\n\n".join(formatted)
+
 
 def retrieve(state: State):
     retrieved_docs = vector_store.similarity_search(state["question"])
@@ -86,8 +84,7 @@ class AskQuestionForm(forms.Form):
 
         result = graph.invoke({"question": question})
 
-        sources = [doc.metadata["source"] for doc in result["context"]]
-        print(f"Sources: {sources}\n\n")
+        print(f"Sources: {[doc.metadata["source"] for doc in result["context"]]}\n\n")
         print(f"Answer: {result['answer']}")
 
         add_message('assistant', result["answer"].to_string())
