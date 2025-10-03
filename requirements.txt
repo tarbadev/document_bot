@@ -1,0 +1,11 @@
+Django==5.2.6
+langchain==0.3.27
+langchain-community==0.3.30
+langchain-core==0.3.77
+langchain-openai==0.3.34
+langchain-pinecone==0.2.12
+langchain-text-splitters==0.3.11
+langgraph==0.6.8
+openai==1.109.1
+pinecone==7.3.0
+python-dotenv==1.1.1
