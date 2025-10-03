@@ -125,4 +125,5 @@ This project is licensed under the [MIT License](./LICENSE) — you are free to 
 
 ---
 
-Built with ❤️ using Django, OpenAI, and Pinecone
+Built with ❤️ using Django, OpenAI, and Pinecone  
+**Tested on:** Python 3.11 (recommended), Django 5.2.x, macOS/Ubuntu.
