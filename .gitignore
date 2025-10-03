@@ -1,6 +1,23 @@
-.idea
-**/__pycache__
-*.sqlite3
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+
+# Env & local DB
 .env
-.venv
-local_storage
+.env.*
+db.sqlite3
+
+# Django
+staticfiles/
+media/
+
+# OS/Editor
+.DS_Store
+.vscode/
+.idea/
+
+# Misc
+local_storage/*
+!local_storage/.gitkeep
