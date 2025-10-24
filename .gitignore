@@ -21,3 +21,6 @@ media/
 # Misc
 local_storage/*
 !local_storage/.gitkeep
+
+# Build
+build

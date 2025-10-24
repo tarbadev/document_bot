@@ -105,6 +105,11 @@ Access Django Admin (optional): **http://127.0.0.1:8000/admin**
 4. Click "Send" to get an AI-generated answer with citations
 5. View chat history - all messages are saved and displayed
 
+## 🚢 Deploying to Render.com
+
+Commit and push on the `main` branch to deploy to Render.com.
+Once deployed, it should be accessible at `https://document-bot-na6n.onrender.com`.
+
 ## 🖼️ Screenshots
 
 ![Screenshot 1](screenshots/screenshot1.png)

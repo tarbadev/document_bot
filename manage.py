@@ -11,6 +11,8 @@ def main():
 
     """Run administrative tasks."""
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'document_bot.settings')
+    port = os.getenv("PORT", "8000")
+    sys.argv += ["runserver", f"0.0.0.0:{port}"] if len(sys.argv) == 1 else []
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:
