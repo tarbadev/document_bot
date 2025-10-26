@@ -119,13 +119,14 @@ STATIC_ROOT = 'build/static'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-sentry_sdk.init(
-    dsn=os.environ["SENTRY_DSN"],
-    send_default_pii=True,
+if DEBUG == "False":
+    sentry_sdk.init(
+        dsn=os.environ["SENTRY_DSN"],
+        send_default_pii=True,
 
-    integrations=[
-        DjangoIntegration(),
-    ],
-    traces_sample_rate=1.0,
-    environment=os.environ["ENVIRONMENT"]
-)
+        integrations=[
+            DjangoIntegration(),
+        ],
+        traces_sample_rate=1.0,
+        environment=os.environ["ENVIRONMENT"]
+    )

@@ -14,6 +14,8 @@ from home.quoted_answer import QuotedAnswer
 from home.repository import add_documents, vector_store
 from home.state import State
 
+from document_bot.metrics_prom import observe_llm
+
 LOCAL_STORAGE_PATH = "local_storage"
 
 system_prompt = (
@@ -62,7 +64,9 @@ def generate(state: State):
     formatted_docs = format_docs_with_id(state["context"])
     prompt_value = prompt.invoke({"question": state["question"], "context": formatted_docs})
     structured_llm = llm.with_structured_output(QuotedAnswer)
+    t0 = time.perf_counter()
     response = structured_llm.invoke(prompt_value)
+    observe_llm((time.perf_counter() - t0) * 1000.0)
     return {"answer": response}
 
 

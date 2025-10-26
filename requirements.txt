@@ -44,6 +44,7 @@ packaging==24.2
 pinecone==7.3.0
 pinecone-plugin-assistant==1.8.0
 pinecone-plugin-interface==0.0.7
+prometheus_client==0.23.1
 propcache==0.3.2
 pydantic==2.11.9
 pydantic-settings==2.11.0
