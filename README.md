@@ -113,7 +113,11 @@ Once deployed, it should be accessible at `https://document-bot-na6n.onrender.co
 ## 🖼️ Screenshots
 
 ![Screenshot 1](screenshots/screenshot1.png)
-![Screenshot 2](screenshots/screenshot2.jpg)
+![Screenshot 2](screenshots/screenshot2.png)
+![Screenshot 3](screenshots/screenshot3.png)
+![Screenshot 4](screenshots/screenshot4.png)  
+Mobile:  
+![Screenshot 5](screenshots/screenshot5.png)
 
 ## 🧪 Tips & Troubleshooting
 
