@@ -18,7 +18,11 @@ from django.urls import path
 
 from . import views
 
+def trigger_error(request):
+    division_by_zero = 1 / 0
+
 urlpatterns = [
     path('', views.HomePageView.as_view(), name='home'),
     path('clear_messages', views.clear_messages),
+    path('sentry-debug/', trigger_error),
 ]
