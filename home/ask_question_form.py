@@ -1,6 +1,12 @@
+import time
 from typing import List
 
 from django import forms
+from document_bot.metrics_prom import observe_llm
+from home.messages_repository import add_message
+from home.quoted_answer import QuotedAnswer
+from home.repository import add_documents, vector_store
+from home.state import State
 from langchain.chat_models import init_chat_model
 from langchain_community.document_loaders import TextLoader
 from langchain_core.documents import Document
@@ -8,13 +14,6 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_text_splitters import CharacterTextSplitter
 from langgraph.constants import START
 from langgraph.graph import StateGraph
-
-from home.messages_repository import add_message
-from home.quoted_answer import QuotedAnswer
-from home.repository import add_documents, vector_store
-from home.state import State
-
-from document_bot.metrics_prom import observe_llm
 
 LOCAL_STORAGE_PATH = "local_storage"
 
