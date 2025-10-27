@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 import os
+import sys
 from pathlib import Path
 
 import sentry_sdk
@@ -48,6 +49,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+
+    'document_bot.middleware.RequestTimingMiddleware',
 ]
 
 ROOT_URLCONF = 'document_bot.urls'
@@ -130,3 +133,21 @@ if DEBUG == "False":
         traces_sample_rate=1.0,
         environment=os.environ["ENVIRONMENT"]
     )
+
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "stream": sys.stdout,
+        },
+    },
+    "loggers": {
+        # Only our analytics logger uses JSON strings already
+        "analytics": {"handlers": ["console"], "level": LOG_LEVEL, "propagate": False},
+        # Everything else can keep default formatting
+        "django": {"handlers": ["console"], "level": LOG_LEVEL, "propagate": True},
+    },
+}

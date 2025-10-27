@@ -1,3 +1,4 @@
+from document_bot.analytics import debug
 from home.models import Message
 
 
@@ -9,5 +10,4 @@ def delete_messages():
 
 def add_message(author: str, content: str):
     Message.objects.create(author=author, content=content).save()
-    print(f"Added '{content}' for role '{author}'")
-    print(Message.objects.all())
+    debug("add_message", { content: content, author: author})

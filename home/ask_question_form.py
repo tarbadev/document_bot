@@ -1,12 +1,8 @@
 import time
+from dataclasses import asdict
 from typing import List
 
 from django import forms
-from document_bot.metrics_prom import observe_llm
-from home.messages_repository import add_message
-from home.quoted_answer import QuotedAnswer
-from home.repository import add_documents, vector_store
-from home.state import State
 from langchain.chat_models import init_chat_model
 from langchain_community.document_loaders import TextLoader
 from langchain_core.documents import Document
@@ -14,6 +10,12 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_text_splitters import CharacterTextSplitter
 from langgraph.constants import START
 from langgraph.graph import StateGraph
+
+from document_bot.analytics import record_llm_call, debug
+from home.messages_repository import add_message
+from home.quoted_answer import QuotedAnswer
+from home.repository import add_documents, vector_store
+from home.state import State
 
 LOCAL_STORAGE_PATH = "local_storage"
 
@@ -23,8 +25,8 @@ system_prompt = (
     "\n\nHere is the document: "
     "{context}"
 )
-
-llm = init_chat_model("gpt-4o-mini", model_provider="openai")
+model = "gpt-4o-mini"
+llm = init_chat_model(model, model_provider="openai")
 
 prompt = ChatPromptTemplate.from_messages(
     [
@@ -63,10 +65,32 @@ def generate(state: State):
     formatted_docs = format_docs_with_id(state["context"])
     prompt_value = prompt.invoke({"question": state["question"], "context": formatted_docs})
     structured_llm = llm.with_structured_output(QuotedAnswer)
+
     t0 = time.perf_counter()
-    response = structured_llm.invoke(prompt_value)
-    observe_llm((time.perf_counter() - t0) * 1000.0)
-    return {"answer": response}
+    ok = True
+    prompt_tokens = completion_tokens = total_tokens = None
+
+    try:
+        response = structured_llm.invoke(prompt_value)
+        usage = getattr(response, "usage", None)
+        if usage:
+            prompt_tokens = getattr(usage, "prompt_tokens", None)
+            completion_tokens = getattr(usage, "completion_tokens", None)
+            total_tokens = getattr(usage, "total_tokens", None)
+        return {"answer": response}
+    except Exception:
+        ok = False
+        raise
+    finally:
+        dt_ms = (time.perf_counter() - t0) * 1000.0
+        tokens = None
+        if total_tokens is not None:
+            tokens = {
+                "prompt": prompt_tokens or 0,
+                "completion": completion_tokens or 0,
+                "total": total_tokens or 0
+            }
+        record_llm_call(model=model, ok=ok, duration_ms=dt_ms, tokens=tokens)
 
 
 class AskQuestionForm(forms.Form):
@@ -87,7 +111,11 @@ class AskQuestionForm(forms.Form):
 
         result = graph.invoke({"question": question})
 
-        print(f"Sources: {[doc.metadata["source"] for doc in result["context"]]}\n\n")
-        print(f"Answer: {result['answer']}")
+        debug("upload_and_ask_question",
+              {
+                  "question": question,
+                  "source": [doc.metadata["source"] for doc in result["context"]],
+                  "answer": asdict(result['answer'])
+              })
 
         add_message('assistant', result["answer"].to_string())

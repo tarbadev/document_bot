@@ -1,5 +1,9 @@
+from dataclasses import dataclass
+
 from pydantic import BaseModel, Field
 
+
+@dataclass
 class Citation(BaseModel):
     source_id: int = Field(
         ...,
