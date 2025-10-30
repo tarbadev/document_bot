@@ -6,6 +6,7 @@ from home.quoted_answer import QuotedAnswer
 
 
 class State(TypedDict):
+    existing_documents: list[Document]
     question: str
-    context: Document
+    new_document: list[Document]
     answer: QuotedAnswer
