@@ -4,6 +4,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+from langfuse import openai
 from openai import OpenAI
 
 from home.domain.file_metadata import FileMetadata
@@ -14,7 +15,9 @@ class OpenAIMetadataExtractor(BaseFileMetadataExtractor):
     llm: OpenAI
 
     def __init__(self, api_key):
-        self.llm = OpenAI(api_key=api_key)
+        self.llm = openai.OpenAI(
+            api_key=api_key,
+        )
 
     def _extract_text_from_file(self, file_path):
         """

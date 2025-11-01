@@ -6,6 +6,7 @@ annotated-types==0.7.0
 anyio==4.11.0
 asgiref==3.9.2
 attrs==25.3.0
+backoff==2.2.1
 certifi==2025.8.3
 charset-normalizer==3.4.3
 click==8.3.0
@@ -14,12 +15,14 @@ distro==1.9.0
 Django==5.2.6
 freezegun==1.5.5
 frozenlist==1.7.0
+googleapis-common-protos==1.71.0
 gunicorn==23.0.0
 h11==0.16.0
 httpcore==1.0.9
 httpx==0.28.1
 httpx-sse==0.4.1
 idna==3.10
+importlib_metadata==8.7.0
 jiter==0.11.0
 jsonpatch==1.33
 jsonpointer==3.0.0
@@ -29,6 +32,7 @@ langchain-core==0.3.77
 langchain-openai==0.3.34
 langchain-pinecone==0.2.12
 langchain-text-splitters==0.3.11
+langfuse==3.8.1
 langgraph==0.6.8
 langgraph-checkpoint==2.1.1
 langgraph-prebuilt==0.6.4
@@ -39,6 +43,12 @@ multidict==6.6.4
 mypy_extensions==1.1.0
 numpy==2.3.3
 openai==1.109.1
+opentelemetry-api==1.38.0
+opentelemetry-exporter-otlp-proto-common==1.38.0
+opentelemetry-exporter-otlp-proto-http==1.38.0
+opentelemetry-proto==1.38.0
+opentelemetry-sdk==1.38.0
+opentelemetry-semantic-conventions==0.59b0
 orjson==3.11.3
 ormsgpack==1.10.0
 packaging==24.2
@@ -47,6 +57,7 @@ pinecone-plugin-assistant==1.8.0
 pinecone-plugin-interface==0.0.7
 prometheus_client==0.23.1
 propcache==0.3.2
+protobuf==6.33.0
 pydantic==2.11.9
 pydantic-settings==2.11.0
 pydantic_core==2.33.2
@@ -70,6 +81,8 @@ typing-inspection==0.4.2
 typing_extensions==4.15.0
 urllib3==2.5.0
 uvicorn==0.38.0
+wrapt==1.17.3
 xxhash==3.6.0
 yarl==1.20.1
+zipp==3.23.0
 zstandard==0.25.0
