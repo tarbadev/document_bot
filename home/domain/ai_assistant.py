@@ -29,8 +29,10 @@ def _format_sources(docs: list[Document]) -> str:
 
     return "Sources:\n" + "\n".join(sources)
 
+
 model = "gpt-4o-mini"
 model_provider = "openai"
+
 
 class AiAssistant:
     vector_store: VectorStore
@@ -62,7 +64,7 @@ class AiAssistant:
     def retrieve(self, state: State) -> dict:
         new_document = state["new_document"]
         docs = self.vector_store.similarity_search(state["question"])
-        [docs.remove(document) for document in new_document]
+        # [docs.remove(document) for document in new_document]
         return {"existing_documents": docs, "new_document": new_document}
 
     def generate(self, state: State) -> dict:
@@ -70,10 +72,22 @@ class AiAssistant:
             f"[Source {i + 1}]\n{doc.page_content}"
             for i, doc in enumerate(state["existing_documents"])
         ])
+        new_document = "\n\nNew document:\n: None\n"
+        if state.get("new_document"):
+            new_document = (
+                "\n\nNew document:\n: \"\"\"\n" +
+                "\n\n".join([
+                    f"[Source {i + 1}]\n{doc.page_content}"
+                    for i, doc in enumerate(state["new_document"])
+                ]) +
+                "\n\"\"\""
+            )
         system_prompt = (
             "You're a helpful AI assistant. Given the existing documents you already know, a user's question "
-                "and, sometimes, a new document, answer the user's question."
+            "and, sometimes, a new document, answer the user's question."
+            "If the new document is just 'None', you should answer the question using only the existing documents."
             "\n\nExisting documents:\n: \"\"\"\n{existing_documents}\n\"\"\""
+            "{new_document}"
         )
         prompt = ChatPromptTemplate.from_messages(
             [
@@ -81,7 +95,11 @@ class AiAssistant:
                 ("human", "{question}"),
             ]
         )
-        prompt_value = prompt.invoke({"question": state["question"], "existing_documents": existing_documents})
+        prompt_value = prompt.invoke({
+            "question": state["question"],
+            "existing_documents": existing_documents,
+            "new_document": new_document,
+        })
 
         t0 = time.perf_counter()
         ok = True
@@ -112,4 +130,3 @@ class AiAssistant:
                     "total": total_tokens or 0
                 }
             record_llm_call(model=model, ok=ok, duration_ms=dt_ms, tokens=tokens)
-

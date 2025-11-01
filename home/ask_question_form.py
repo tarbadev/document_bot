@@ -1,28 +1,25 @@
+import os
+
 from django import forms
-from langchain_community.document_loaders import TextLoader
-from langchain_text_splitters import CharacterTextSplitter
 
 from home.domain.ai_assistant import AiAssistant
+from home.domain.file_uploader import FileUploader
+from home.infrastructure.open_ai_metadata_extractor import OpenAIMetadataExtractor
+from home.infrastructure.pinecone_document_repository import PineconeDocumentRepository
 from home.messages_repository import add_message
-from home.repository import add_documents, vector_store
+from home.repository import vector_store
 
 LOCAL_STORAGE_PATH = "local_storage"
 
-
-def load_and_chunk_document(file):
-    file_path = f"{LOCAL_STORAGE_PATH}/{file.name}"
-    with open(file_path, "wb+") as destination:
-        for chunk in file.chunks():
-            destination.write(chunk)
-
-    text_splitter = CharacterTextSplitter(chunk_size=500, chunk_overlap=15)
-    chunks = text_splitter.split_documents(TextLoader(file_path).load())
-
-    return chunks
-
-
 class AskQuestionForm(forms.Form):
     ai_assistant = AiAssistant(vector_store=vector_store)
+    file_uploader = FileUploader(
+        OpenAIMetadataExtractor(api_key=os.environ.get("OPENAI_API_KEY")),
+        PineconeDocumentRepository(
+            api_key=os.environ.get("PINECONE_API_KEY"),
+            index_name="document-bot"
+        ),
+    )
     file = forms.FileField(required=False)
     question = forms.CharField(label="Question:", widget=forms.TextInput(attrs={'placeholder': 'Type a question.'}))
 
@@ -32,8 +29,7 @@ class AskQuestionForm(forms.Form):
 
         new_document = None
         if file:
-            new_document = load_and_chunk_document(file)
-            add_documents(new_document)
+            new_document = self.file_uploader.upload_file(f"{LOCAL_STORAGE_PATH}/{file.name}")
 
         answer = self.ai_assistant.answer(question, new_document)
 
