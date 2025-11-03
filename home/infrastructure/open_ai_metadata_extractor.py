@@ -20,50 +20,71 @@ class OpenAIMetadataExtractor(BaseFileMetadataExtractor):
         )
 
     def _extract_text_from_file(self, file_path):
-        """
-        Extract text content from various file types.
-
-        Args:
-            file_path: Path to the file
-
-        Returns:
-            Extracted text content
-        """
         file_path = Path(file_path)
-
         with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
             return f.read()
+    
+    def _get_text_sample(self, text: str, max_chars: int = 12000) -> str:
+        if len(text) <= max_chars:
+            return text
+        
+        beginning_chars = int(max_chars * 0.6)
+        end_chars = int(max_chars * 0.4)
+        
+        return text[:beginning_chars] + "\n\n[... middle content omitted ...]\n\n" + text[-end_chars:]
 
-    def extract_metadata(self, file_path, max_chars=8000) -> FileMetadata:
+    def extract_metadata(self, file_path, max_chars=12000) -> FileMetadata:
         base_metadata = super().extract_metadata(file_path)
 
+        if Path(file_path).stat().st_size == 0:
+            return base_metadata
+
         file_content = self._extract_text_from_file(file_path)
-        text_sample = file_content
+        text_sample = self._get_text_sample(file_content, max_chars)
 
-        prompt = f"""Analyze the following document and extract metadata. Return ONLY a valid JSON object with these fields:
+        prompt = f"""Extract metadata from this document. Analyze the content carefully to identify key themes and information.
 
-        - title: The document title (string)
-        - authors: List of author names (array of strings, empty array if none found)
-        - published_date: Publication date in YYYY-MM-DD format (string, null if not found)
-        - publication_year: Year of publication (string, null if not found)
-        - editor: Editor name if mentioned (string, null if not found)
-        - publisher: Publisher name if mentioned (string, null if not found)
-        - category: Document category/type (e.g., "research paper", "technical report", "book chapter", "article", "manual") (string)
-        - keywords: Key topics/themes (array of strings, 3-10 keywords)
-        - abstract: Brief summary or abstract if present (string, max 500 chars, null if not found)
-        - language: Document language (string, e.g., "English")
-        - document_type: Type of document (e.g., "academic", "technical", "business", "legal") (string)
-        - subject_area: Main subject area (e.g., "Computer Science", "Medicine", "Business") (string)
+Return ONLY a valid JSON object with these exact fields:
 
-        Document text:
-        {text_sample}
+{{
+  "title": "string - the document title",
+  "authors": ["array of author names without titles"],
+  "published_date": "YYYY-MM-DD or null",
+  "publication_year": integer or null,
+  "editor": "string or null",
+  "publisher": "string or null",
+  "category": "string - broad category",
+  "keywords": ["3-10 strings - main themes and topics"],
+  "abstract": "string - brief summary under 300 chars, or null",
+  "language": "string - e.g. English",
+  "document_type": "string - specific type",
+  "subject_area": "string - main field"
+}}
 
-        Return only the JSON object, no other text."""
+Field Guidelines:
+- title: Extract or infer the document title
+- authors: Full names without "Dr.", "Prof.", etc. For "Mary Wollstonecraft Shelley" use "Mary Shelley"
+- published_date/publication_year: Use ORIGINAL publication date for reprints/classics
+- category: Broad type like "Fiction", "Non-fiction", "Academic", "Technical"
+- keywords: Identify main themes from content (e.g., for gothic horror: ["gothic", "horror", "science fiction", "monster", "creation", "ethics"])
+- abstract: Summarize the main content/plot/purpose
+- document_type: Specific type like "Novel", "Research Paper", "Tutorial", "Essay"
+- subject_area: Field like "Literature", "Computer Science", "Environmental Science"
+
+Examples:
+- Classic novel: category="Fiction", document_type="Novel", subject_area="Literature"
+- Research paper: category="Academic", document_type="Research Paper", subject_area="Computer Science"
+- Technical guide: category="Technical", document_type="Tutorial", subject_area="Computer Science"
+
+Document:
+{text_sample}
+
+JSON only:"""
 
         response = self.llm.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "You are a metadata extraction assistant. Return only valid JSON."},
+                {"role": "system", "content": "You are a precise metadata extraction system. Analyze documents and extract accurate metadata. Focus on identifying the true nature and themes of the content. Return only valid JSON."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0
@@ -84,7 +105,6 @@ class OpenAIMetadataExtractor(BaseFileMetadataExtractor):
             )
 
     def _parse_datetime(self, value: str | datetime | None) -> Optional[datetime]:
-        """Parse datetime from string or return existing datetime"""
         if value is None:
             return None
         if isinstance(value, datetime):
@@ -92,7 +112,6 @@ class OpenAIMetadataExtractor(BaseFileMetadataExtractor):
         return datetime.fromisoformat(value)
 
     def _parse_int(self, value: str | int | None) -> Optional[int]:
-        """Parse int from string or return existing int"""
         if value is None:
             return None
         if isinstance(value, int):
