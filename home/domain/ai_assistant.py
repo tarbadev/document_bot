@@ -62,12 +62,13 @@ class AiAssistant:
             f"[Source {i + 1}]\n{doc.page_content}"
             for i, doc in enumerate(state["existing_documents"])
         ])
+        num_existing = len(state["existing_documents"])
         new_document = "\n\nNew document:\n: None\n"
-        if state.get("new_document"):
+        if state.get("new_document") and len(state["new_document"]) > 0:
             new_document = (
                 "\n\nNew document:\n: \"\"\"\n" +
                 "\n\n".join([
-                    f"[Source {i + 1}]\n{doc.page_content}"
+                    f"[Source {num_existing + i + 1}]\n{doc.page_content}"
                     for i, doc in enumerate(state["new_document"])
                 ]) +
                 "\n\"\"\""
