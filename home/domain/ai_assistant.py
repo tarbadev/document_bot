@@ -1,20 +1,15 @@
 import time
-import typing
 from dataclasses import asdict
-from typing import Union
 
 from langchain.chat_models import init_chat_model
 from langchain_core.documents import Document
-from langchain_core.language_models import LanguageModelInput
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.runnables import Runnable
 from langgraph.graph import StateGraph, START
-from openai import BaseModel
 
 from document_bot.analytics import debug, record_llm_call
-from home.domain.state import State
-from home.domain.vector_store import VectorStore
+from home.domain.document_repository import DocumentRepository
 from home.domain.quoted_answer import QuotedAnswer
+from home.domain.state import State
 
 
 def _format_sources(docs: list[Document]) -> str:
@@ -35,12 +30,9 @@ model_provider = "openai"
 
 
 class AiAssistant:
-    vector_store: VectorStore
-    llm: Runnable[LanguageModelInput, Union[typing.Dict, BaseModel]]
-
-    def __init__(self, vector_store: VectorStore):
+    def __init__(self, document_repository: DocumentRepository):
         self.graph = self._build_graph()
-        self.vector_store = vector_store
+        self.document_repository = document_repository
         self.llm = (init_chat_model(model, model_provider=model_provider)
                     .with_structured_output(QuotedAnswer))
 
@@ -61,11 +53,9 @@ class AiAssistant:
 
         return result["answer"].to_string()
 
-    def retrieve(self, state: State) -> dict:
-        new_document = state["new_document"]
-        docs = self.vector_store.similarity_search(state["question"])
-        # [docs.remove(document) for document in new_document]
-        return {"existing_documents": docs, "new_document": new_document}
+    def retrieve(self, state: State) -> State:
+        state["existing_documents"] = self.document_repository.similarity_search(state["question"])
+        return state
 
     def generate(self, state: State) -> dict:
         existing_documents = "\n\n".join([

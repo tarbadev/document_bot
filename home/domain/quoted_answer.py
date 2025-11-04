@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from typing import List
 
 from pydantic import BaseModel, Field
@@ -6,7 +5,6 @@ from pydantic import BaseModel, Field
 from home.domain.citation import Citation
 
 
-@dataclass
 class QuotedAnswer(BaseModel):
     """Answer the user question based only on the given sources, and cite the sources used."""
 

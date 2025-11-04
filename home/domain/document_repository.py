@@ -9,3 +9,7 @@ class DocumentRepository(ABC):
     @abstractmethod
     def upload_document(self, file_path: str, file_metadata: FileMetadata) -> list[Document]:
         pass
+
+    @abstractmethod
+    def similarity_search(self, query: str, k: int = 4) -> list[Document]:
+        pass

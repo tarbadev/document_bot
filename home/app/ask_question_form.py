@@ -7,18 +7,15 @@ from home.domain.file_uploader import FileUploader
 from home.infrastructure.open_ai_metadata_extractor import OpenAIMetadataExtractor
 from home.infrastructure.pinecone_document_repository import PineconeDocumentRepository
 from home.messages_repository import add_message
-from home.repository import vector_store
 
 LOCAL_STORAGE_PATH = "local_storage"
 
 class AskQuestionForm(forms.Form):
-    ai_assistant = AiAssistant(vector_store=vector_store)
+    document_repository = PineconeDocumentRepository(api_key=os.environ.get("PINECONE_API_KEY"), index_name="document-bot")
+    ai_assistant = AiAssistant(document_repository=document_repository)
     file_uploader = FileUploader(
         OpenAIMetadataExtractor(api_key=os.environ.get("OPENAI_API_KEY")),
-        PineconeDocumentRepository(
-            api_key=os.environ.get("PINECONE_API_KEY"),
-            index_name="document-bot"
-        ),
+        document_repository,
     )
     file = forms.FileField(required=False)
     question = forms.CharField(label="Question:", widget=forms.TextInput(attrs={'placeholder': 'Type a question.'}))

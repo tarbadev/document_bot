@@ -16,7 +16,8 @@ class TestPineconeDocumentRepository(TestCase):
 
     subject: PineconeDocumentRepository
 
-    def setUp(self):
+    @patch('home.infrastructure.pinecone_document_repository.PineconeVectorStore')
+    def setUp(self, mock_pinecone_vector_store_class):
         pinecone_patcher = patch('home.infrastructure.pinecone_document_repository.Pinecone')
         openai_embeddings_patcher = patch('home.infrastructure.pinecone_document_repository.OpenAIEmbeddings')
 
@@ -31,6 +32,9 @@ class TestPineconeDocumentRepository(TestCase):
 
         self.mock_embeddings = Mock()
         mock_openai_embeddings.return_value = self.mock_embeddings
+
+        self.mock_vector_store = Mock()
+        mock_pinecone_vector_store_class.return_value = self.mock_vector_store
 
         self.subject = PineconeDocumentRepository(self.api_key, self.index_name)
 
@@ -129,3 +133,17 @@ class TestPineconeDocumentRepository(TestCase):
             self.assertIn('created_time', doc.metadata)
             self.assertIn('modified_time', doc.metadata)
             self.assertIn('upload_time', doc.metadata)
+
+    def test_similarity_search(
+            self,
+    ):
+        question = "What is the meaning of life?"
+        answer = [Document(page_content="42", metadata={"source": "Frankenstein.txt"})]
+
+        self.mock_vector_store.similarity_search.return_value = answer
+
+        actual = self.subject.similarity_search(question, 5)
+
+        self.assertEqual(actual, answer)
+
+        self.mock_vector_store.similarity_search.assert_called_once_with(question, 5)

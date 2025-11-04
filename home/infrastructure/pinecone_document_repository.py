@@ -25,6 +25,10 @@ class PineconeDocumentRepository(DocumentRepository):
             self.index = self.pc.Index(index_name)
 
         self.embeddings = OpenAIEmbeddings(model="text-embedding-3-small", api_key=openai_api_key)
+        self.vector_store = PineconeVectorStore(
+            index_name=index_name,
+            embedding=self.embeddings
+        )
 
     def _create_index(self):
         self.pc.create_index(
@@ -112,3 +116,6 @@ class PineconeDocumentRepository(DocumentRepository):
         )
 
         return chunks
+
+    def similarity_search(self, query: str, k: int = 4) -> list[Document]:
+        return self.vector_store.similarity_search(query, k)
