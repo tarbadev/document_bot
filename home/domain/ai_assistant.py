@@ -1,15 +1,19 @@
 import time
+from typing import Optional
 
 from langchain.chat_models import init_chat_model
 from langchain_core.documents import Document
 from langchain_core.prompts import ChatPromptTemplate
+from langfuse import get_client
 from langgraph.graph import StateGraph, START
 
-from document_bot.analytics import debug, record_llm_call
+from document_bot.analytics import debug, record_llm_call, record_question_attempt
 from home.domain.document_repository import DocumentRepository
+from home.domain.invalid_question_error import InvalidQuestionError
 from home.domain.question_validator import QuestionValidator
 from home.domain.quoted_answer import QuotedAnswer
 from home.domain.state import State
+from home.infrastructure.flagged_question_tracker import get_tracker
 
 model = "gpt-4o-mini"
 model_provider = "openai"
@@ -22,25 +26,113 @@ class AiAssistant:
         self.question_validator = question_validator
         self.llm = (init_chat_model(model, model_provider=model_provider)
                     .with_structured_output(QuotedAnswer))
+        self.flagged_tracker = get_tracker()
+        self.langfuse = get_client()
 
     def _build_graph(self):
         graph_builder = StateGraph(State).add_sequence([self.retrieve, self.generate])
         graph_builder.add_edge(START, "retrieve")
         return graph_builder.compile()
 
-    def answer(self, question: str, new_document: list[Document]) -> str:
-        self.question_validator.validate(question)
+    def answer(self, question: str, new_document: list[Document], user_id: Optional[str] = None) -> str:
+        validation_status = "safe"
+        is_recovery = False
 
-        result = self.graph.invoke({"question": question, "new_document": new_document})
+        if user_id:
+            is_recovery = self.flagged_tracker.check_recovery(user_id)
 
-        debug("answer",
-              {
-                  "question": question,
-                  "source": [doc.metadata["source"] for doc in result["existing_documents"]],
-                  "answer": result['answer'].model_dump()
-              })
+        with self.langfuse.start_as_current_span(
+            name="question_answer",
+            input={"question": question, "question_length": len(question)},
+            metadata={
+                "has_new_document": new_document is not None and len(new_document) > 0,
+                "user_id": user_id or "anonymous"
+            }
+        ) as trace_span:
+            try:
+                with self.langfuse.start_as_current_span(
+                    name="validation",
+                    input={"question": question}
+                ) as validation_span:
+                    try:
+                        self.question_validator.validate(question, user_id=user_id)
 
-        return result["answer"].to_string()
+                        validation_span.update(output={"passed": True})
+
+                        if user_id:
+                            was_recovery = self.flagged_tracker.record_success(user_id)
+                            if was_recovery:
+                                is_recovery = True
+
+                        record_question_attempt(
+                            user_id=user_id,
+                            flagged=False,
+                            is_recovery=is_recovery
+                        )
+
+                    except InvalidQuestionError as e:
+                        validation_status = "flagged"
+                        failed_validator = str(e)
+
+                        validation_span.update(output={"passed": False, "reason": str(e)})
+
+                        if user_id:
+                            self.flagged_tracker.record_flagged(user_id)
+
+                        record_question_attempt(
+                            user_id=user_id,
+                            flagged=True,
+                            validator_failed=failed_validator
+                        )
+
+                        trace_span.update_trace(tags=["flagged", "blocked"])
+                        trace_span.update(
+                            output={"error": str(e)},
+                            metadata={
+                                "validation_status": validation_status,
+                                "failed_validator": failed_validator
+                            }
+                        )
+
+                        raise
+
+                with self.langfuse.start_as_current_span(
+                    name="retrieval",
+                    input={"question": question}
+                ) as retrieval_span:
+                    result = self.graph.invoke({"question": question, "new_document": new_document})
+
+                    retrieval_span.update(output={
+                        "num_documents": len(result["existing_documents"]),
+                        "sources": [doc.metadata.get("source", "unknown") for doc in result["existing_documents"]]
+                    })
+
+                debug("answer",
+                      {
+                          "question": question,
+                          "source": [doc.metadata["source"] for doc in result["existing_documents"]],
+                          "answer": result['answer'].model_dump()
+                      })
+
+                trace_span.update_trace(tags=["safe"] + (["recovery"] if is_recovery else []))
+                trace_span.update(
+                    output={"answer": result['answer'].model_dump()},
+                    metadata={
+                        "validation_status": validation_status,
+                        "num_sources": len(result["existing_documents"]),
+                        "is_recovery": is_recovery
+                    }
+                )
+
+                return result["answer"].to_string()
+
+            except Exception as e:
+                trace_span.update_trace(tags=["error"])
+                trace_span.update(
+                    output={"error": str(e)},
+                    metadata={"validation_status": validation_status}
+                )
+                raise
 
     def retrieve(self, state: State) -> State:
         state["existing_documents"] = self.document_repository.similarity_search(state["question"])

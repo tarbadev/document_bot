@@ -37,7 +37,7 @@ class TestAskQuestionForm(TestCase):
         form.upload_and_ask_question(file=None)
 
         mock_file_uploader.upload_file.assert_not_called()
-        mock_ai_assistant.answer.assert_called_once_with('What is the meaning of life?', None)
+        mock_ai_assistant.answer.assert_called_once_with('What is the meaning of life?', None, user_id=None)
         mock_add_message.assert_has_calls([
             call('user', 'What is the meaning of life?'),
             call('assistant', '42')
@@ -72,7 +72,7 @@ class TestAskQuestionForm(TestCase):
         form.upload_and_ask_question(file=uploaded_file)
 
         mock_file_uploader.upload_file.assert_called_once_with(file_path)
-        mock_ai_assistant.answer.assert_called_once_with('What is this document about?', uploaded_document_chunks)
+        mock_ai_assistant.answer.assert_called_once_with('What is this document about?', uploaded_document_chunks, user_id=None)
         mock_add_message.assert_has_calls([
             call('user', 'What is this document about?'),
             call('assistant', 'It is about testing')

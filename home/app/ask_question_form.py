@@ -33,7 +33,7 @@ class AskQuestionForm(forms.Form):
     file = forms.FileField(required=False)
     question = forms.CharField(label="Question:", widget=forms.TextInput(attrs={'placeholder': 'Type a question.'}))
 
-    def upload_and_ask_question(self, file):
+    def upload_and_ask_question(self, file, user_id=None):
         question = self.cleaned_data["question"]
         add_message('user', question)
 
@@ -41,6 +41,6 @@ class AskQuestionForm(forms.Form):
         if file:
             new_document = self.file_uploader.upload_file(f"{LOCAL_STORAGE_PATH}/{file.name}")
 
-        answer = self.ai_assistant.answer(question, new_document)
+        answer = self.ai_assistant.answer(question, new_document, user_id=user_id)
 
         add_message('assistant', answer)

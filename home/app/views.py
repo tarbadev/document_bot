@@ -19,14 +19,29 @@ class HomePageView(FormView):
         return context
 
     def form_valid(self, form):
+        user_id = self.request.session.session_key
+        if not user_id:
+            self.request.session.create()
+            user_id = self.request.session.session_key
+
         try:
-            form.upload_and_ask_question(self.request.FILES.get("file"))
+            form.upload_and_ask_question(self.request.FILES.get("file"), user_id=user_id)
         except InvalidQuestionError as e:
-            error("form_valid", {"message": "Invalid question", "error": str(e), "question": form.cleaned_data.get("question")})
+            error("form_valid", {
+                "message": "Invalid question",
+                "error": str(e),
+                "question": form.cleaned_data.get("question"),
+                "user_id": user_id
+            })
             form.add_error('question', str(e) if str(e) else 'Your question is not appropriate or valid. Please try a different question.')
             return self.form_invalid(form)
         except Exception as e:
-            error("form_valid", {"message": "Unexpected error", "error": str(e), "question": form.cleaned_data.get("question")})
+            error("form_valid", {
+                "message": "Unexpected error",
+                "error": str(e),
+                "question": form.cleaned_data.get("question"),
+                "user_id": user_id
+            })
             form.add_error(None, 'An unexpected error occurred. Please try again.')
             return self.form_invalid(form)
 

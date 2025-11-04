@@ -12,13 +12,27 @@ from home.domain.state import State
 class TestAIAssistant(TestCase):
     subject: AiAssistant
 
+    @patch('home.domain.ai_assistant.get_client')
     @patch('home.domain.ai_assistant.init_chat_model')
-    def setUp(self, mock_init_chat_model):
+    @patch.dict('os.environ', {
+        'LANGFUSE_PUBLIC_KEY': 'pk-lf-test',
+        'LANGFUSE_SECRET_KEY': 'sk-lf-test'
+    }, clear=False)
+    def setUp(self, mock_init_chat_model, mock_get_client):
         mock_llm = Mock()
         mock_structured_output = Mock()
         mock_llm.with_structured_output.return_value = mock_structured_output
         self.mock_init_chat_model = mock_init_chat_model
         self.mock_init_chat_model.return_value = mock_llm
+
+        mock_langfuse = Mock()
+        mock_span = Mock()
+        mock_span.update.return_value = None
+        mock_span.update_trace.return_value = None
+        mock_span.__enter__ = Mock(return_value=mock_span)
+        mock_span.__exit__ = Mock(return_value=False)
+        mock_langfuse.start_as_current_span.return_value = mock_span
+        mock_get_client.return_value = mock_langfuse
 
         self.mock_document_repository = Mock(spec_set=DocumentRepository)
         self.mock_validator = Mock(spec_set=QuestionValidator)
@@ -59,7 +73,7 @@ class TestAIAssistant(TestCase):
 
         self.subject.answer(question, [])
 
-        self.mock_validator.validate.assert_called_once_with(question)
+        self.mock_validator.validate.assert_called_once_with(question, user_id=None)
 
     def test_answer_raises_when_validation_fails(self):
         question = "This is a very long question" * 100
