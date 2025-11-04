@@ -4,6 +4,7 @@ from django.views.generic import FormView
 
 from document_bot.analytics import error
 from home.app.ask_question_form import AskQuestionForm
+from home.domain.invalid_question_error import InvalidQuestionError
 from home.messages_repository import get_messages, delete_messages
 
 
@@ -18,7 +19,16 @@ class HomePageView(FormView):
         return context
 
     def form_valid(self, form):
-        form.upload_and_ask_question(self.request.FILES.get("file"))
+        try:
+            form.upload_and_ask_question(self.request.FILES.get("file"))
+        except InvalidQuestionError as e:
+            error("form_valid", {"message": "Invalid question", "error": str(e), "question": form.cleaned_data.get("question")})
+            form.add_error('question', str(e) if str(e) else 'Your question is not appropriate or valid. Please try a different question.')
+            return self.form_invalid(form)
+        except Exception as e:
+            error("form_valid", {"message": "Unexpected error", "error": str(e), "question": form.cleaned_data.get("question")})
+            form.add_error(None, 'An unexpected error occurred. Please try again.')
+            return self.form_invalid(form)
 
         return super(HomePageView, self).form_valid(form)
 

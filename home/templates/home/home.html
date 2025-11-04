@@ -1252,6 +1252,37 @@
                 return '<sup data-source="Source ' + num + '">' + num + '</sup>';
             });
         });
+
+        // Display form errors as toast notifications
+        {% if form.errors %}
+            // Hide loading indicator if there are errors
+            if (loadingMessage) {
+                loadingMessage.style.display = 'none';
+            }
+            // Re-enable submit button
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.value = 'Send Message';
+            }
+            // Reset file upload state
+            if (fileLabel && fileInput && fileInput.files.length > 0) {
+                fileLabel.classList.remove('uploading');
+                const fileSize = (fileInput.files[0].size / 1024).toFixed(1);
+                if (fileStatus) {
+                    fileStatus.textContent = `${fileSize} KB`;
+                }
+            }
+
+            {% for field, errors in form.errors.items %}
+                {% for error in errors %}
+                    {% if field == '__all__' %}
+                        showToast('error', 'Error', '{{ error|escapejs }}');
+                    {% else %}
+                        showToast('error', 'Invalid Question', '{{ error|escapejs }}');
+                    {% endif %}
+                {% endfor %}
+            {% endfor %}
+        {% endif %}
     });
 </script>
 </body>
