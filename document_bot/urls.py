@@ -27,5 +27,5 @@ def prom_metrics_view(_request):
 urlpatterns = [
     path('metrics/', prom_metrics_view),
     path('admin/', admin.site.urls),
-    path('', include('home.urls')),
+    path('', include('home.app.urls')),
 ]

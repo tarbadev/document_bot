@@ -14,7 +14,7 @@ from openai import BaseModel
 from document_bot.analytics import debug, record_llm_call
 from home.domain.state import State
 from home.domain.vector_store import VectorStore
-from home.quoted_answer import QuotedAnswer
+from home.domain.quoted_answer import QuotedAnswer
 
 
 def _format_sources(docs: list[Document]) -> str:

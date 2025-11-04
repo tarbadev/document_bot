@@ -16,7 +16,8 @@ Including another URLconf
 """
 from django.urls import path
 
-from . import views
+from home.app import views
+
 
 def trigger_error(request):
     division_by_zero = 1 / 0

@@ -3,7 +3,7 @@ from typing import List
 
 from pydantic import BaseModel, Field
 
-from home.citation import Citation
+from home.domain.citation import Citation
 
 
 @dataclass
